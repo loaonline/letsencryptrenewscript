@@ -4,10 +4,14 @@
 #
 # Renew Let's Encrypt SSL cert and assemble pem for pound.
 #
+DOMAINNAME="www.mikeroberts.ca"
+NOTIFYEMAIL="postmaster"
+
 LECONFIGDIR="/etc/letsencrypt"
 LEINSTALLDIR="/opt/letsencrypt"
+LELOG="/opt/letsencrypt"
 LECOMMAND="$LEINSTALLDIR/letsencrypt-auto"
-LEARGS="--config $LECONFIGDIR/cli.ini -d www.mikeroberts.ca certonly"
+LEARGS="--config $LECONFIGDIR/cli.ini -d $DOMAINNAME certonly"
 
 [ -d "$LEINSTALLDIR" ] || exit 1
 [ -d "$LECONFIGDIR" ] || exit 1
@@ -20,12 +24,13 @@ echo "executing letsencrypt: $LECOMMAND $LEARGS"
 ./$COMMAND $LEARGS
 
 if [ $? -ne 0 ]; then
-    ERRORLOG=`tail /var/log/letsencrypt/letsencrypt.log`
-    echo -e "failure renewing cert. \n \n" $ERRORLOG | mail -s "Lets Encrypt Cert Alert" postmaster
+    ERRORLOG=`tail $LELOG`
+    echo -e "failure renewing cert. \n \n" $ERRORLOG | mail -s "Lets Encrypt Cert Alert" $NOTIFYEMAIL
 else
     echo "success renewing cert."
     # certs are ready so package and restart pound
-    cd $LECONFIGDIR/live/www.mikeroberts.ca
+    cd $LECONFIGDIR/live/$DOMAINNAME
+    # package up PEM for webserver and restart 
     cat fullchain.pem privkey.pem > for_pound_ssl.pem
     chmod 400 for_pound_ssl.pem
     echo "for_pound_ssl.pem cert package created."
